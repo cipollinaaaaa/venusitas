@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Venusian Gems</title>
+  <style>
+    body {
+      background-color: #000;
+      color: white;
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 20px 0 50px 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      touch-action: none;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: none;
+    }
+
+    .info-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 20px;
+      gap: 15px;
+      position: absolute;
+      top: 50%;
+      left: 30px;
+      transform: translateY(-50%);
+      z-index: 10;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      color: #00ffe7;
+      text-shadow: 0 0 10px #00ffe7, 0 0 20px #00ffe7;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .score-timer {
+      font-size: 1.6em;
+      color: #fff;
+      text-shadow: 0 0 5px #fff;
+      margin-top: 10px;
+    }
+
+    #timer {
+      font-size: 1.6em;
+      color: #ff0033;
+      text-shadow: 0 0 5px #ff0033;
+      font-weight: bold;
+    }
+
+    #resetButton {
+      padding: 10px 20px;
+      font-size: 1.2em;
+      background-color: #ff0033;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    #board {
+      width: 586px; 
+      height: 586px; 
+      display: grid;
+      grid-template-columns: repeat(8, 68px); 
+      gap: 6px; 
+      margin: 0;
+      position: relative;
+      z-index: 0;
+    }
+
+    .cell {
+      width: 68px; 
+      height: 68px;
+      border-radius: 18px;
+      cursor: grab;
+      transition: transform 0.2s ease-in-out, box-shadow 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px; 
+      font-weight: bold;
+      background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+      box-shadow:
+        inset 0 0 8px rgba(255,255,255,0.4),
+        inset 0 5px 12px rgba(0,0,0,0.3),
+        0 2px 8px rgba(0,0,0,0.4);
+      color: white;
+
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .cell:hover {
+      transform: scale(1.1);
+      box-shadow:
+        inset 0 0 10px rgba(255,255,255,0.6),
+        0 0 15px #fff,
+        0 0 30px #fff;
+    }
+
+    .cell:active {
+      transform: scale(1.1);
+      z-index: 100;
+    }
+
+    .red { background-color: #ff0033; }
+    .yellow { background-color: #ffdd00; color: #333; }
+    .green { background-color: #33cc33; }
+    .pink { background-color: #ff66cc; }
+    .purple { background-color: #aa33ff; }
+    .orange { background-color: #ff8800; color: #333; }
+    .aqua { background-color: #00cccc; }
+
+    .venusian {
+      background-image: url('venusian.png');
+      background-size: cover;
+      background-position: center;
+      color: transparent;
+    }
+
+    .mano {
+      background-image: url('mano.gif');
+      background-size: cover;
+      background-position: center;
+      color: transparent;
+    }
+
+    #lightning {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .flash {
+      animation: flashUp 0.2s forwards;
+    }
+
+    @keyframes flashUp {
+      0% { opacity: 0.8; }
+      100% { opacity: 0; }
+    }
+
+    #messageOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.1), rgba(0,0,0,0.95));
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      backdrop-filter: blur(4px);
+      flex-direction: column;
+      text-align: center;
+    }
+
+    #messageOverlay h2 {
+      font-size: 3em;
+      color: #ff0;
+      text-shadow: 0 0 10px #ff0, 0 0 20px #ff0, 0 0 30px #ff0;
+      animation: blink 1s infinite;
+      margin-bottom: 20px;
+    }
+
+    #messageOverlay .message-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    #messageOverlay img.message-img {
+      width: 120px;
+      height: auto;
+      animation: float 2s infinite ease-in-out;
+    }
+
+    #messageOverlay button.message-reset-button {
+      margin-top: 30px;
+      padding: 12px 24px;
+      font-size: 1.2em;
+      background-color: #ff0033;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+
+    #messageOverlay.game-over h2 {
+        color: #ff0033;
+        text-shadow: 0 0 10px #ff0033, 0 0 20px #ff0033, 0 0 30px #ff0033;
+    }
+  </style>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000"/> 
+</head>
+<body>
+
+  <div class="info-panel">
+    <h1>Venusian Gems</h1>
+    <div class="score-timer" id="score">Score: 0</div>
+    <div class="score-timer" id="timer">Time: 60</div>
+    <button id="resetButton" onclick="resetGame()">🔄 Reset</button>
+  </div>
+  
+  <div id="board"></div>
+
+  <div id="lightning"></div>
+
+  <audio id="matchSoundThree" src="venusci.mp3" preload="auto"></audio>
+  <audio id="matchSoundFour" src="venusciously.mp3" preload="auto"></audio>
+  <audio id="backgroundMusic" src="venusound.mp3" loop preload="auto"></audio>
+  <audio id="winFanfareSound" src="venusliscious.mp3" preload="auto"></audio>
+  <audio id="gameOverSound" src="loser.mp3" preload="auto"></audio>
+
+  <div id="messageOverlay">
+    <div class="message-content">
+        <h2 id="messageTitle"></h2>
+        <img id="messageImg1" src="" alt="" class="message-img">
+        <img id="messageImg2" src="" alt="" class="message-img">
+        <button class="message-reset-button" onclick="resetGame()">Play Again ➡️</button>
+    </div>
+  </div>
+
+  <script>
+    // Registra el Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker registrado con éxito:', registration);
+                })
+                .catch(error => {
+                    console.error('Fallo el registro del Service Worker:', error);
+                });
+        });
+    }
+
+    const board = document.getElementById("board");
+    const scoreDisplay = document.getElementById("score");
+    const timerDisplay = document.getElementById("timer");
+    const messageOverlay = document.getElementById("messageOverlay");
+    const messageTitle = document.getElementById("messageTitle");
+    const messageImg1 = document.getElementById("messageImg1");
+    const messageImg2 = document.getElementById("messageImg2");
+    const lightning = document.getElementById("lightning");
+
+    const htmlMatchSoundThree = document.getElementById("matchSoundThree");
+    const htmlMatchSoundFour = document.getElementById("matchSoundFour");
+    const htmlBackgroundMusic = document.getElementById("backgroundMusic");
+    const htmlWinFanfareSound = document.getElementById("winFanfareSound");
+    const htmlGameOverSound = document.getElementById("gameOverSound");
+
+    let audioContext = null;
+    let backgroundMusicPlaying = false;
+    let winSoundLoadedBuffer = null;
+    let loseSoundLoadedBuffer = null;
+
+    let gameLoop;
+    let timerCountdown;
+    let timeLeft = 60;
+    let gameActive = false;
+
+    const letterMap = {
+      red: 'V', yellow: 'E', green: 'N', pink: 'U', purple: 'S', orange: 'I', aqua: 'A',
+      venusian: 'N',
+      mano: 'N'
+    };
+
+    const colors = ["red", "yellow", "green", "pink", "purple", "orange", "aqua", "venusian", "mano"];
+    const boardSize = 8;
+    const totalCells = boardSize * boardSize;
+    let cells = [];
+    let cellIdBeingDragged = null;
+    let score = 0;
+
+    // Variables para manejo táctil/mouse
+    let isDragging = false;
+    let startX, startY;
+    let draggedCell = null;
+    let targetCell = null;      // Para touch
+    let mouseTargetCell = null; // Para mouse
+
+    // --- AudioContext Initialization & Sound Loading ---
+    const soundFiles = [
+        { name: 'venusound', mp3: 'venusound.mp3', ogg: 'venusound.ogg' },
+        { name: 'venusci', mp3: 'venusci.mp3', ogg: 'venusci.ogg' },
+        { name: 'venusciously', mp3: 'venusciously.mp3', ogg: 'venusciously.ogg' },
+        { name: 'venusliscious', mp3: 'venusliscious.mp3', ogg: 'venusliscious.ogg' },
+        { name: 'loser', mp3: 'loser.mp3', ogg: 'loser.ogg' }
+    ];
+
+    async function initializeAudioContextAndLoadSounds() {
+        if (!window.AudioContext && !window.webkitAudioContext) {
+            console.warn("Web Audio API no soportada.");
+            return;
+        }
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            console.log("AudioContext inicializado.");
+        }
+
+        const resumeContextOnGesture = () => {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    console.log('AudioContext reanudado con éxito.');
+                    document.documentElement.removeEventListener('mousedown', resumeContextOnGesture);
+                    document.documentElement.removeEventListener('keydown', resumeContextOnGesture);
+                    document.documentElement.removeEventListener('touchstart', resumeContextOnGesture);
+                    if (!backgroundMusicPlaying && gameActive) {
+                        htmlBackgroundMusic.play().catch(e => console.warn("Música de fondo no se pudo reproducir después de reanudar el contexto:", e));
+                        backgroundMusicPlaying = true;
+                    }
+                }).catch(e => console.error('Fallo al reanudar AudioContext:', e));
+            }
+        };
+        document.documentElement.addEventListener('mousedown', resumeContextOnGesture, { once: true });
+        document.documentElement.addEventListener('keydown', resumeContextOnGesture, { once: true });
+        document.documentElement.addEventListener('touchstart', resumeContextOnGesture, { once: true });
+
+        try {
+            winSoundLoadedBuffer = await loadSoundBuffer(htmlWinFanfareSound.src);
+            console.log("Sonido de victoria cargado en buffer.");
+            loseSoundLoadedBuffer = await loadSoundBuffer(htmlGameOverSound.src);
+            console.log("Sonido de Game Over cargado en buffer.");
+        } catch (e) {
+            console.error("Error precargando sonidos para AudioContext:", e);
+        }
+    }
+
+    async function loadSoundBuffer(url) {
+        if (!audioContext) throw new Error("AudioContext no está listo.");
+        try {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            return await audioContext.decodeAudioData(arrayBuffer);
+        } catch (e) {
+            console.error(`Fallo al cargar el buffer de audio desde ${url}:`, e);
+            throw e;
+        }
+    }
+
+    function playAudioContextSound(buffer, volume = 1.0) {
+        if (!audioContext || !buffer) {
+            console.warn("AudioContext no está listo o el buffer falta.");
+            return false;
+        }
+
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+                console.log('AudioContext reanudado para reproducción de sonido.');
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = volume;
+                source.connect(gainNode).connect(audioContext.destination);
+                source.start(0);
+                console.log(`Reproduciendo sonido AudioContext: ${buffer.duration.toFixed(2)}s al volumen ${volume}`);
+            }).catch(e => {
+                console.error("Fallo al reanudar AudioContext para reproducción de sonido:", e);
+                return false;
+            });
+        } else {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = volume;
+            source.connect(gainNode).connect(audioContext.destination);
+            source.start(0);
+            console.log(`Reproduciendo sonido AudioContext: ${buffer.duration.toFixed(2)}s al volumen ${volume}`);
+        }
+        return true;
+    }
+
+    // --- Game Logic ---
+    function getRandomColor() {
+        const validColors = colors.filter(c => c && typeof c === 'string');
+        if (validColors.length === 0) return "red";
+        return validColors[Math.floor(Math.random() * validColors.length)];
+    }
+
+    function createBoard() {
+      cells = [];
+      board.innerHTML = '';
+
+      for (let i = 0; i < totalCells; i++) {
+        const cell = document.createElement("div");
+        cell.setAttribute("id", i);
+        cell.classList.add("cell");
+
+        const color = getRandomColor();
+        cell.classList.add(color);
+        cell.textContent = letterMap[color] || "";
+
+        // Eventos táctiles
+        cell.addEventListener("touchstart", handleTouchStart, { passive: false });
+        cell.addEventListener("touchmove", handleTouchMove, { passive: false });
+        cell.addEventListener("touchend", handleTouchEnd);
+
+        // Eventos de ratón (PC)
+        cell.addEventListener("mousedown", handleMouseDown);
+        cell.addEventListener("mousemove", handleMouseMove);
+        cell.addEventListener("mouseup", handleMouseUp);
+
+        // Para iniciar el juego con el primer toque o clic
+        cell.addEventListener("mousedown", handleFirstGameInteraction, { once: true });
+        cell.addEventListener("touchstart", handleFirstGameInteraction, { once: true, passive: false });
+
+        board.appendChild(cell);
+        cells.push(cell);
+      }
+      console.log("Tablero creado con gemas iniciales.");
+    }
+
+    function handleFirstGameInteraction() {
+        if (!gameActive) {
+            console.log("Primera interacción con gema detectada. Iniciando juego y música de fondo.");
+            if (!backgroundMusicPlaying) {
+                htmlBackgroundMusic.play().then(() => {
+                    backgroundMusicPlaying = true;
+                    console.log("Música de fondo iniciada con éxito.");
+                }).catch(e => {
+                    console.warn("Reproducción automática de música de fondo impedida. Esperando a que AudioContext se reanude.", e);
+                });
+            }
+            startGameLoop();
+            gameActive = true;
+        }
+    }
+
+    function startGameLoop() {
+      clearInterval(gameLoop);
+      clearInterval(timerCountdown);
+
+      timeLeft = 60;
+      timerDisplay.textContent = `Time: ${timeLeft}`;
+      
+      gameLoop = setInterval(() => {
+        if (!gameActive) {
+            clearInterval(gameLoop);
+            return;
+        }
+        checkMatchesAndRefill();
+        checkWin();
+      }, 200);
+
+      timerCountdown = setInterval(() => {
+        if (!gameActive) {
+            clearInterval(timerCountdown);
+            return;
+        }
+        timeLeft--;
+        timerDisplay.textContent = `Time: ${timeLeft}`;
+        if (timeLeft <= 0) {
+          endGameByTime();
+        }
+      }, 1000);
+      console.log("Bucle del juego y temporizador iniciados.");
+    }
+
+    function resetGame() {
+      console.log("Reiniciando juego...");
+      gameActive = false;
+      clearInterval(gameLoop);
+      clearInterval(timerCountdown);
+
+      messageOverlay.style.display = "none";
+      messageOverlay.classList.remove('game-over');
+      
+      score = 0;
+      updateScore();
+      createBoard();
+
+      if (htmlBackgroundMusic) {
+        htmlBackgroundMusic.pause();
+        htmlBackgroundMusic.currentTime = 0;
+      }
+      backgroundMusicPlaying = false;
+      console.log("Juego reiniciado. Listo para nueva partida.");
+    }
+
+    // --- Touch Handlers (con throttling) ---
+    let lastTargetCellId = null;
+    let lastMoveX = 0, lastMoveY = 0;
+    const MOVE_THRESHOLD = 30;
+
+    function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        lastMoveX = startX;
+        lastMoveY = startY;
+        draggedCell = e.target;
+        isDragging = true;
+        cellIdBeingDragged = parseInt(draggedCell.id);
+        draggedCell.style.transform = "scale(1.1)";
+        draggedCell.style.zIndex = "100";
+        lastTargetCellId = null;
+    }
+
+    function handleTouchMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const currentX = touch.clientX;
+        const currentY = touch.clientY;
+
+        const distanceMoved = Math.hypot(currentX - lastMoveX, currentY - lastMoveY);
+        if (distanceMoved < MOVE_THRESHOLD) return;
+
+        lastMoveX = currentX;
+        lastMoveY = currentY;
+
+        const elementUnderTouch = document.elementFromPoint(currentX, currentY);
+        if (elementUnderTouch && elementUnderTouch.classList.contains("cell") && elementUnderTouch !== draggedCell) {
+            const newTargetId = parseInt(elementUnderTouch.id);
+            if (newTargetId !== lastTargetCellId) {
+                if (targetCell) {
+                    targetCell.style.transform = "";
+                    targetCell.style.boxShadow = "";
+                }
+
+                targetCell = elementUnderTouch;
+                lastTargetCellId = newTargetId;
+
+                targetCell.style.transform = "scale(1.05)";
+                targetCell.style.boxShadow = "0 0 15px #ffffff80";
+            }
+        }
+    }
+
+    function handleTouchEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        draggedCell.style.transform = "";
+        draggedCell.style.zIndex = "";
+        if (targetCell) {
+            targetCell.style.transform = "";
+            targetCell.style.boxShadow = "";
+        }
+
+        if (targetCell) {
+            const cellIdBeingReplaced = parseInt(targetCell.id);
+            const rowDragged = Math.floor(cellIdBeingDragged / boardSize);
+            const colDragged = cellIdBeingDragged % boardSize;
+            const rowReplaced = Math.floor(cellIdBeingReplaced / boardSize);
+            const colReplaced = cellIdBeingReplaced % boardSize;
+
+            const isAdjacent = (
+                (Math.abs(rowDragged - rowReplaced) === 1 && colDragged === colReplaced) ||
+                (Math.abs(colDragged - colReplaced) === 1 && rowDragged === rowReplaced)
+            );
+
+            if (isAdjacent) {
+                swapGems(cellIdBeingDragged, cellIdBeingReplaced);
+                checkMatchesAndRefill();
+                checkWin();
+            }
+        }
+
+        cellIdBeingDragged = null;
+        draggedCell = null;
+        targetCell = null;
+        lastTargetCellId = null;
+    }
+
+    // --- Mouse Handlers (sin throttling, ultra suave) ---
+    function handleMouseDown(e) {
+        startX = e.clientX;
+        startY = e.clientY;
+        draggedCell = e.target;
+        isDragging = true;
+        cellIdBeingDragged = parseInt(draggedCell.id);
+        draggedCell.style.transform = "scale(1.1)";
+        draggedCell.style.zIndex = "100";
+        mouseTargetCell = null;
+    }
+
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+
+        const elementUnderMouse = document.elementFromPoint(currentX, currentY);
+        if (elementUnderMouse && elementUnderMouse.classList.contains("cell") && elementUnderMouse !== draggedCell) {
+            if (elementUnderMouse !== mouseTargetCell) {
+                if (mouseTargetCell) {
+                    mouseTargetCell.style.transform = "";
+                    mouseTargetCell.style.boxShadow = "";
+                }
+
+                mouseTargetCell = elementUnderMouse;
+
+                mouseTargetCell.style.transform = "scale(1.05)";
+                mouseTargetCell.style.boxShadow = "0 0 15px #ffffff80";
+            }
+        } else if (mouseTargetCell) {
+            mouseTargetCell.style.transform = "";
+            mouseTargetCell.style.boxShadow = "";
+            mouseTargetCell = null;
+        }
+    }
+
+    function handleMouseUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        draggedCell.style.transform = "";
+        draggedCell.style.zIndex = "";
+        if (mouseTargetCell) {
+            mouseTargetCell.style.transform = "";
+            mouseTargetCell.style.boxShadow = "";
+        }
+
+        if (mouseTargetCell) {
+            const cellIdBeingReplaced = parseInt(mouseTargetCell.id);
+            const rowDragged = Math.floor(cellIdBeingDragged / boardSize);
+            const colDragged = cellIdBeingDragged % boardSize;
+            const rowReplaced = Math.floor(cellIdBeingReplaced / boardSize);
+            const colReplaced = cellIdBeingReplaced % boardSize;
+
+            const isAdjacent = (
+                (Math.abs(rowDragged - rowReplaced) === 1 && colDragged === colReplaced) ||
+                (Math.abs(colDragged - colReplaced) === 1 && rowDragged === rowReplaced)
+            );
+
+            if (isAdjacent) {
+                swapGems(cellIdBeingDragged, cellIdBeingReplaced);
+                checkMatchesAndRefill();
+                checkWin();
+            }
+        }
+
+        cellIdBeingDragged = null;
+        draggedCell = null;
+        targetCell = null;
+        mouseTargetCell = null;
+    }
+
+    // ✅ FUNCIÓN CORREGIDA: swapGems
+    function swapGems(id1, id2) {
+        const cell1 = cells[id1];
+        const cell2 = cells[id2];
+
+        const color1 = [...cell1.classList].find(cls => cls !== "cell");
+        const color2 = [...cell2.classList].find(cls => cls !== "cell");
+
+        const text1 = cell1.textContent;
+        const text2 = cell2.textContent;
+
+        if (color1) cell1.classList.remove(color1);
+        if (color2) cell2.classList.remove(color2);
+
+        if (color2) cell1.classList.add(color2);
+        if (color1) cell2.classList.add(color1);
+
+        cell1.textContent = text2;
+        cell2.textContent = text1;
+    }
+
+    function playMatchSound(type = "triple") {
+      if (type === "quad") {
+        htmlMatchSoundFour.currentTime = 0;
+        htmlMatchSoundFour.play().catch(e => console.error("Error al reproducir sonido cuádruple:", e));
+      } else {
+        htmlMatchSoundThree.currentTime = 0;
+        htmlMatchSoundThree.play().catch(e => console.error("Error al reproducir sonido triple:", e));
+      }
+    }
+
+    function showLightningFlash() {
+      lightning.classList.add("flash");
+      setTimeout(() => lightning.classList.remove("flash"), 200);
+    }
+
+    function collectMatches() {
+        let matchesFound = false;
+        let matchedIndexes = new Set();
+
+        for (let i = 0; i < totalCells; i++) {
+            if (i % boardSize <= boardSize - 3) {
+                const color1 = cells[i]?.classList[1];
+                if (!color1 || color1 === "cell") continue;
+
+                if (cells[i+1]?.classList[1] === color1 && cells[i+2]?.classList[1] === color1) {
+                    matchesFound = true;
+                    matchedIndexes.add(i); matchedIndexes.add(i+1); matchedIndexes.add(i+2);
+                    if (i % boardSize <= boardSize - 4 && cells[i+3]?.classList[1] === color1) {
+                        matchedIndexes.add(i+3);
+                        if (i % boardSize <= boardSize - 5 && cells[i+4]?.classList[1] === color1) {
+                            matchedIndexes.add(i+4);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (let i = 0; i < totalCells; i++) {
+            if (i < totalCells - (boardSize * 2)) {
+                const color1 = cells[i]?.classList[1];
+                if (!color1 || color1 === "cell") continue;
+
+                if (cells[i + boardSize]?.classList[1] === color1 && cells[i + (boardSize * 2)]?.classList[1] === color1) {
+                    matchesFound = true;
+                    matchedIndexes.add(i); matchedIndexes.add(i + boardSize); matchedIndexes.add(i + (boardSize * 2));
+                    if (i < totalCells - (boardSize * 3) && cells[i + (boardSize * 3)]?.classList[1] === color1) {
+                        matchedIndexes.add(i + (boardSize * 3));
+                        if (i < totalCells - (boardSize * 4) && cells[i + (boardSize * 4)]?.classList[1] === color1) {
+                            matchedIndexes.add(i + (boardSize * 4));
+                        }
+                    }
+                }
+            }
+        }
+        return Array.from(matchedIndexes);
+    }
+
+    function checkMatchesAndRefill() {
+        let matchesFoundThisCycle = false;
+        let iteration = 0;
+        const maxIterations = 10;
+
+        do {
+            iteration++;
+            if (iteration > maxIterations) {
+                console.error("checkMatchesAndRefill: Máximas iteraciones alcanzadas.");
+                break;
+            }
+
+            let matches = collectMatches();
+            if (matches.length > 0) {
+                matchesFoundThisCycle = true;
+                playMatchSound(matches.length >= 4 ? "quad" : "triple");
+                showLightningFlash();
+                
+                matches.forEach(idx => {
+                    const currentColor = [...cells[idx].classList].find(cls => cls !== "cell");
+                    if (currentColor) cells[idx].classList.remove(currentColor);
+                    cells[idx].textContent = "";
+                    score += 10;
+                });
+                updateScore();
+                
+                moveGemsDown();
+            } else {
+                matchesFoundThisCycle = false;
+            }
+        } while (matchesFoundThisCycle);
+
+        return matchesFoundThisCycle;
+    }
+
+    function updateScore() {
+      scoreDisplay.textContent = "Score: " + score;
+    }
+
+    function moveGemsDown() {
+        for (let col = 0; col < boardSize; col++) {
+            let emptySpots = [];
+            for (let row = boardSize - 1; row >= 0; row--) {
+                const idx = row * boardSize + col;
+                if ([...cells[idx].classList].filter(cls => cls !== "cell").length === 0) {
+                    emptySpots.push(idx);
+                } else if (emptySpots.length > 0) {
+                    const targetIdx = emptySpots.shift();
+                    
+                    const movingColor = [...cells[idx].classList].find(cls => cls !== "cell");
+                    const movingText = cells[idx].textContent;
+
+                    const targetColor = [...cells[targetIdx].classList].find(cls => cls !== "cell");
+                    if (targetColor) cells[targetIdx].classList.remove(targetColor);
+                    cells[targetIdx].textContent = "";
+
+                    if (movingColor) cells[targetIdx].classList.add(movingColor);
+                    cells[targetIdx].textContent = movingText;
+
+                    if (movingColor) cells[idx].classList.remove(movingColor);
+                    cells[idx].textContent = "";
+
+                    emptySpots.push(idx);
+                }
+            }
+        }
+
+        for (let i = 0; i < totalCells; i++) {
+            if ([...cells[i].classList].filter(cls => cls !== "cell").length === 0) {
+                const newColor = getRandomColor();
+                cells[i].classList.add(newColor);
+                cells[i].textContent = letterMap[newColor] || "";
+            }
+        }
+    }
+
+    function checkWin() {
+        if (!gameActive) return;
+
+        const boardLetters = cells.map(cell => {
+            const cellClasses = Array.from(cell.classList);
+            if (cellClasses.includes('venusian') || cellClasses.includes('mano')) {
+                return 'N';
+            }
+            return cell.textContent || "";
+        }).join('');
+        const targetWord = "VENUSIAN";
+
+        for (let row = 0; row < boardSize; row++) {
+            const rowString = boardLetters.substring(row * boardSize, (row * boardSize) + boardSize);
+            if (rowString.includes(targetWord)) {
+                console.log(`Condición de Victoria cumplida: 'VENUSIAN' encontrado horizontalmente en la fila ${row}.`);
+                showWinMessage();
+                return;
+            }
+        }
+
+        for (let col = 0; col < boardSize; col++) {
+            let colString = '';
+            for (let row = 0; row < boardSize; row++) {
+                const cellClasses = Array.from(cells[col + (row * boardSize)].classList);
+                 if (cellClasses.includes('venusian') || cellClasses.includes('mano')) {
+                    colString += 'N';
+                } else {
+                    colString += cells[col + (row * boardSize)].textContent || "";
+                }
+            }
+            if (colString.includes(targetWord)) {
+                console.log(`Condición de Victoria cumplida: 'VENUSIAN' encontrado verticalmente en la columna ${col}.`);
+                showWinMessage();
+                return;
+            }
+        }
+    }
+
+    function showWinMessage() {
+      console.log("Intentando mostrar mensaje de VICTORIA y reproducir venusliscious.mp3...");
+      gameActive = false;
+      clearInterval(gameLoop);
+      clearInterval(timerCountdown);
+      
+      if (htmlBackgroundMusic) {
+        htmlBackgroundMusic.pause();
+        htmlBackgroundMusic.currentTime = 0;
+        backgroundMusicPlaying = false;
+      }
+
+      messageOverlay.style.display = "flex";
+      messageTitle.textContent = "VENUSLICIOUS, you are Venusian People!!! 🚀";
+      messageImg1.src = "mano.gif";
+      messageImg2.src = "venusian.png";
+      messageOverlay.classList.remove('game-over');
+
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            if (winSoundLoadedBuffer) {
+                playAudioContextSound(winSoundLoadedBuffer, 1.0);
+            } else {
+                htmlWinFanfareSound.currentTime = 0;
+                htmlWinFanfareSound.volume = 1.0;
+                htmlWinFanfareSound.play().catch(e => console.error("Error al reproducir sonido de victoria (fallback):", e));
+            }
+        }).catch(e => {
+            htmlWinFanfareSound.currentTime = 0;
+            htmlWinFanfareSound.volume = 1.0;
+            htmlWinFanfareSound.play().catch(e => console.error("Error al reproducir sonido de victoria (fallback):", e));
+        });
+      } else if (winSoundLoadedBuffer) {
+          playAudioContextSound(winSoundLoadedBuffer, 1.0);
+      } else {
+          htmlWinFanfareSound.currentTime = 0;
+          htmlWinFanfareSound.volume = 1.0;
+          htmlWinFanfareSound.play().catch(e => console.error("Error al reproducir sonido de victoria (fallback directo):", e));
+      }
+    }
+
+    function endGameByTime() {
+      console.log("¡Se acabo el tiempo! Game Over.");
+      gameActive = false;
+      clearInterval(gameLoop);
+      clearInterval(timerCountdown);
+      
+      if (htmlBackgroundMusic) {
+        htmlBackgroundMusic.pause();
+        htmlBackgroundMusic.currentTime = 0;
+        backgroundMusicPlaying = false;
+      }
+
+      messageOverlay.style.display = "flex";
+      messageTitle.textContent = "¡Se acabo el tiempo! ¡Game Over!";
+      messageImg1.src = "mano.gif";
+      messageImg2.src = "venusian.png";
+      messageOverlay.classList.add('game-over');
+
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            if (loseSoundLoadedBuffer) {
+                playAudioContextSound(loseSoundLoadedBuffer, 1.0);
+            } else {
+                htmlGameOverSound.currentTime = 0;
+                htmlGameOverSound.volume = 1.0;
+                htmlGameOverSound.play().catch(e => console.error("Error al reproducir sonido de derrota (fallback):", e));
+            }
+        }).catch(e => {
+            htmlGameOverSound.currentTime = 0;
+            htmlGameOverSound.volume = 1.0;
+            htmlGameOverSound.play().catch(e => console.error("Error al reproducir sonido de derrota (fallback):", e));
+        });
+      } else if (loseSoundLoadedBuffer) {
+          playAudioContextSound(loseSoundLoadedBuffer, 1.0);
+      } else {
+          htmlGameOverSound.currentTime = 0;
+          htmlGameOverSound.volume = 1.0;
+          htmlGameOverSound.play().catch(e => console.error("Error al reproducir sonido de derrota (fallback directo):", e));
+      }
+    }
+
+    // --- Initial Setup ---
+    initializeAudioContextAndLoadSounds();
+    createBoard();
+    console.log("Configuración inicial completa. Esperando la primera interacción del usuario.");
+  </script>
+</body>
+</html>
